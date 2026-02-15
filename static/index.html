@@ -1,435 +1,80 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NusaGemma | Puskesmas AI Dashboard</title>
-    <style>
-      :root {
-        --primary: #007bff;
-        --bg: #f8f9fa;
-        --chat-bg: #ffffff;
-        --user-msg: #e3f2fd;
-        --ai-msg: #f1f3f4;
-        --thought-bg: #e9ecef;
-        --border: #dee2e6;
-      }
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NUSAGEMMA</title>
+    
+    <!-- Google Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Local CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-      body {
-        font-family: "Segoe UI", system-ui, sans-serif;
-        margin: 0;
-        display: flex;
-        height: 100vh;
-        background: var(--bg);
-      }
-
-      /* SIDEBAR */
-      .sidebar {
-        width: 300px;
-        background: white;
-        border-right: 1px solid var(--border);
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-      }
-      .sidebar h2 {
-        color: var(--primary);
-        margin-top: 0;
-      }
-      .status-badge {
-        background: #d4edda;
-        color: #155724;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 0.9em;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 20px;
-      }
-      .upload-area {
-        border: 2px dashed var(--border);
-        padding: 20px;
-        text-align: center;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        cursor: pointer;
-        transition: 0.2s;
-      }
-      .upload-area:hover {
-        border-color: var(--primary);
-        background: #f0f7ff;
-      }
-      .doc-list {
-        list-style: none;
-        padding: 0;
-        overflow-y: auto;
-        flex: 1;
-      }
-      .doc-item {
-        background: var(--bg);
-        padding: 10px;
-        margin-bottom: 8px;
-        border-radius: 4px;
-        font-size: 0.9em;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .doc-status {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        display: inline-block;
-      }
-      .active {
-        background: #28a745;
-      }
-
-      /* CHAT AREA */
-      .main {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        padding: 20px;
-        max-width: 900px;
-        margin: 0 auto;
-        width: 100%;
-      }
-      .chat-window {
-        flex: 1;
-        overflow-y: auto;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-      }
-
-      .message {
-        max-width: 80%;
-        padding: 15px;
-        border-radius: 12px;
-        line-height: 1.5;
-        position: relative;
-      }
-      .user {
-        align-self: flex-end;
-        background: var(--primary);
-        color: white;
-        border-bottom-right-radius: 2px;
-      }
-      .ai {
-        align-self: flex-start;
-        background: white;
-        border: 1px solid var(--border);
-        border-bottom-left-radius: 2px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-      }
-
-      /* THOUGHT PROCESS STYLING */
-      details.thought-process {
-        background: var(--thought-bg);
-        border-radius: 8px;
-        margin-bottom: 10px;
-        font-size: 0.9em;
-        color: #495057;
-        overflow: hidden;
-      }
-      details.thought-process summary {
-        padding: 8px 15px;
-        cursor: pointer;
-        font-weight: 600;
-        user-select: none;
-        outline: none;
-      }
-      .thought-content {
-        padding: 10px 15px;
-        border-top: 1px solid #dcdcdc;
-        font-family: "Consolas", monospace;
-        white-space: pre-wrap;
-        font-size: 0.85em;
-      }
-
-      .input-area {
-        background: white;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-        display: flex;
-        gap: 10px;
-        align-items: center;
-      }
-      input[type="text"] {
-        flex: 1;
-        padding: 12px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        outline: none;
-        font-size: 16px;
-      }
-      button {
-        background: var(--primary);
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: 0.2s;
-      }
-      button:hover {
-        background: #0056b3;
-      }
-      button:disabled {
-        background: #ccc;
-      }
-
-      .sources {
-        font-size: 0.8em;
-        color: #6c757d;
-        margin-top: 5px;
-        font-style: italic;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- SIDEBAR: DATA MANAGEMENT -->
-    <div class="sidebar">
-      <h2>🏥 NusaGemma</h2>
-      <div id="status" class="status-badge">Connecting...</div>
-
-      <div
-        class="upload-area"
-        onclick="document.getElementById('pdfInput').click()"
-      >
-        <div>📄 Upload Protocol (PDF)</div>
-        <input
-          type="file"
-          id="pdfInput"
-          accept=".pdf"
-          style="display: none"
-          onchange="uploadPDF(this)"
-        />
-      </div>
-
-      <h4 style="margin-bottom: 10px">Active Guidelines</h4>
-      <ul id="docList" class="doc-list">
-        <!-- Docs go here -->
-      </ul>
-    </div>
-
-    <!-- MAIN: CHAT -->
-    <div class="main">
-      <div class="chat-window" id="chatWindow">
-        <div class="message ai">
-          Hello! I am MedGemma (4B Quantized). I am ready to assist with
-          clinical guidelines.
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="brand">
+            <i class="fa-solid fa-staff-snake"></i> NUSAGEMMA
         </div>
-      </div>
 
-      <div class="input-area">
-        <label><input type="checkbox" id="useRag" checked /> Use RAG</label>
-        <input
-          type="text"
-          id="userInput"
-          placeholder="Ask about symptoms, protocols, or drugs..."
-          onkeypress="handleEnter(event)"
-        />
-        <button onclick="sendMessage()" id="sendBtn">Send</button>
-      </div>
-    </div>
+        <button class="btn-upload" id="uploadBtn">
+            <i class="fa-solid fa-plus"></i> Upload PDF
+        </button>
+        <input type="file" id="pdfInput" accept=".pdf" hidden>
 
-    <script>
-      const API_URL = "http://127.0.0.1:8000";
+        <div class="section-title">Knowledge Base</div>
+        <ul id="docList" class="file-list">
+            <!-- Files injected by JS -->
+            <li class="file-item loading">Loading...</li>
+        </ul>
 
-      // --- 1. INITIALIZATION ---
-      window.onload = async () => {
-        checkHealth();
-        loadDocuments();
-      };
+        <div class="system-status">
+            <div id="statusDot" class="status-dot"></div>
+            <span id="statusText">Connecting...</span>
+        </div>
+    </aside>
 
-      async function checkHealth() {
-        try {
-          const res = await fetch(`${API_URL}/health`);
-          const data = await res.json();
-          const badge = document.getElementById("status");
-          if (data.status === "online") {
-            badge.textContent = `🟢 Online: ${data.model}`;
-            badge.style.background = "#d4edda";
-          } else {
-            badge.textContent = "🔴 Loading Model...";
-            badge.style.background = "#f8d7da";
-          }
-        } catch (e) {
-          document.getElementById("status").textContent = "🔴 Offline";
-        }
-      }
+    <!-- MAIN INTERFACE -->
+    <main class="main">
+        <div class="top-bar">
+            <div class="model-badge">
+                <i class="fa-solid fa-microchip"></i> Gemma-2b-it-Q4
+            </div>
+            <label class="toggle-rag">
+                <input type="checkbox" id="useRag" checked> 
+                <span>Enable RAG Context</span>
+            </label>
+        </div>
 
-      async function loadDocuments() {
-        const res = await fetch(`${API_URL}/documents`);
-        const docs = await res.json();
-        const list = document.getElementById("docList");
-        list.innerHTML = "";
+        <div id="chatWindow" class="chat-window">
+            <div class="container-width">
+                <!-- Welcome Message -->
+                <div class="message ai">
+                    <div class="ai-icon"><i class="fa-solid fa-robot"></i></div>
+                    <div class="ai-content">
+                        <div class="ai-text">
+                            <strong>Selamat datang di NUSAGEMMA.</strong><br>
+                            Sistem siap membantu analisis Juknis & Rekam Medis.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        for (const [filename, info] of Object.entries(docs)) {
-          const li = document.createElement("li");
-          li.className = "doc-item";
-          li.innerHTML = `
-                    <span>${filename.substring(0, 20)}...</span>
-                    <span class="doc-status ${info.enabled ? "active" : ""}" title="${info.enabled ? "Active" : "Disabled"}"></span>
-                `;
-          list.appendChild(li);
-        }
-      }
+        <div class="input-area">
+            <div class="input-wrapper">
+                <input type="text" id="userInput" placeholder="Tanyakan diagnosa, obat, atau prosedur..." autocomplete="off">
+                <button id="sendBtn">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </main>
 
-      async function uploadPDF(input) {
-        if (!input.files[0]) return;
-
-        const formData = new FormData();
-        formData.append("file", input.files[0]);
-
-        // Ask for overwrite if needed (Simple version: always force=true for dev)
-        const confirmOverwrite = confirm("Overwrite if exists?");
-
-        const badge = document.getElementById("status");
-        badge.textContent = "⏳ Processing PDF...";
-
-        try {
-          const res = await fetch(
-            `${API_URL}/documents/upload?force=${confirmOverwrite}`,
-            {
-              method: "POST",
-              body: formData,
-            },
-          );
-          const data = await res.json();
-          alert(data.message);
-          loadDocuments();
-          checkHealth();
-        } catch (e) {
-          alert("Upload failed");
-        }
-      }
-
-      // --- 2. CHAT LOGIC (STREAMING) ---
-      function handleEnter(e) {
-        if (e.key === "Enter") sendMessage();
-      }
-
-      async function sendMessage() {
-        const input = document.getElementById("userInput");
-        const message = input.value.trim();
-        if (!message) return;
-
-        // UI Updates
-        addMessage(message, "user");
-        input.value = "";
-        document.getElementById("sendBtn").disabled = true;
-
-        // Create AI Message Container
-        const aiContainerId = "ai-" + Date.now();
-        createAIMessageContainer(aiContainerId);
-
-        // Start Stream
-        try {
-          const response = await fetch(`${API_URL}/chat-stream`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              message: message,
-              use_rag: document.getElementById("useRag").checked,
-            }),
-          });
-
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-
-          // Stream Loop
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-
-            // Process complete SSE lines
-            const lines = buffer.split("\n\n");
-            buffer = lines.pop(); // Keep incomplete line in buffer
-
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                const jsonStr = line.replace("data: ", "");
-                try {
-                  const data = JSON.parse(jsonStr);
-                  handleStreamData(data, aiContainerId);
-                } catch (e) {
-                  console.error("Parse error", e);
-                }
-              }
-            }
-          }
-        } catch (e) {
-          addMessage("Error connecting to AI.", "ai");
-        } finally {
-          document.getElementById("sendBtn").disabled = false;
-        }
-      }
-
-      // UI HELPERS
-      function addMessage(text, role) {
-        const chat = document.getElementById("chatWindow");
-        const div = document.createElement("div");
-        div.className = `message ${role}`;
-        div.textContent = text;
-        chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
-      }
-
-      function createAIMessageContainer(id) {
-        const chat = document.getElementById("chatWindow");
-        const wrapper = document.createElement("div");
-        wrapper.className = "message ai";
-        wrapper.id = id;
-
-        // 1. Thought Process (Hidden by default)
-        const details = document.createElement("details");
-        details.className = "thought-process";
-        details.innerHTML = `<summary>🧠 Thinking Process...</summary><div class="thought-content"></div>`;
-        wrapper.appendChild(details);
-
-        // 2. Final Answer
-        const answerDiv = document.createElement("div");
-        answerDiv.className = "final-answer";
-        wrapper.appendChild(answerDiv);
-
-        chat.appendChild(wrapper);
-        chat.scrollTop = chat.scrollHeight;
-      }
-
-      function handleStreamData(data, containerId) {
-        const container = document.getElementById(containerId);
-        const thoughtContent = container.querySelector(".thought-content");
-        const answerDiv = container.querySelector(".final-answer");
-
-        if (data.type === "thought") {
-          thoughtContent.textContent += data.content;
-          // Auto-expand thought if it's the first chunk
-          // if (!container.querySelector('details').open) container.querySelector('details').open = true;
-        } else if (data.type === "final_answer") {
-          // If thought was open, maybe close it now? Or keep it.
-          answerDiv.innerHTML += data.content.replace(/\n/g, "<br>");
-        } else if (data.type === "sources") {
-          if (data.content.length > 0) {
-            const sourceDiv = document.createElement("div");
-            sourceDiv.className = "sources";
-            sourceDiv.innerHTML = `📚 Source: ${data.content.join(", ")}`;
-            container.appendChild(sourceDiv);
-          }
-        }
-
-        // Auto scroll
-        const chat = document.getElementById("chatWindow");
-        chat.scrollTop = chat.scrollHeight;
-      }
-    </script>
-  </body>
+    <!-- Local JS -->
+    <script src="app.js"></script>
+</body>
 </html>

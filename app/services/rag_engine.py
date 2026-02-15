@@ -4,7 +4,7 @@ import os
 import json
 import shutil
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter #CHANGE to langchain_text_splitters from langchain.text_splitter for top module import
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from app.core.config import settings
