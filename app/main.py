@@ -5,6 +5,8 @@ import time
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # Import internals
 from app.models.schemas import ChatRequest, ChatResponse, ToggleRequest
@@ -12,6 +14,15 @@ from app.services.llm_engine import llm_service
 from app.services.rag_engine import rag_service
 
 app = FastAPI(title="NusaGemma API", version="2.0")
+
+# --- SERVE STATIC FRONTEND ---
+# This mounts the "static" folder so the HTML can access CSS/JS if needed
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# This serves the index.html when you open the root URL
+@app.get("/")
+async def read_root():
+    return FileResponse('static/index.html')
 
 # CORS (Frontend Access)
 app.add_middleware(
