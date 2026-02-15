@@ -1,0 +1,27 @@
+# --- Python & System ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.vscode/
+.idea/
+
+# --- Heavy Models (CRITICAL) ---
+# Exclude the big GGUF file and cache folders
+models/*.gguf
+models/embed_cache/
+models/whisper_cache/
+models/hf_cache/
+
+# --- Local Data (Privacy) ---
+# We don't want to upload the Vector DB or test PDFs
+data/vector_db/
+data/guidelines/*.pdf
+data/registry.json
+
+# --- OS Junk ---
+.DS_Store
+Thumbs.db
