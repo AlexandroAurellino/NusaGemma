@@ -20,10 +20,34 @@ const sendBtn = g("sendBtn");
 
 /* ── Boot ── */
 window.addEventListener("DOMContentLoaded", () => {
+  const panel = g("kbPanel");
+  const overlay = g("kbOverlay");
+
+  // 1. Matikan efek transisi/animasi geser sementara
+  panel.style.transition = "none";
+  overlay.style.transition = "none";
+
+  // 2. Buka panel secara instan jika status sebelumnya 'open'
+  if (localStorage.getItem("kbState") === "open") {
+    panel.classList.add("open");
+    overlay.classList.add("open");
+  }
+
+  // 3. Paksa browser membaca ulang tata letak (reflow) agar posisi instan terkunci
+  void panel.offsetWidth;
+
+  // 4. Kembalikan efek transisi agar tombol close/open manual tetap punya animasi
+  panel.style.transition = "";
+  overlay.style.transition = "";
+
   checkHealth();
   fetchDocs();
   renderHist();
   startNewChat();
+
+  // ... (sisa event listener untuk inp, drop zone, dll di bawahnya tetap sama)
+  
+  // ... (sisa kode kamu di bawahnya tetap sama)
 
   inp.addEventListener("input", () => {
     inp.style.height = "auto";
@@ -63,10 +87,15 @@ function toggleSB() {
 function openKB() {
   g("kbPanel").classList.add("open");
   g("kbOverlay").classList.add("open");
+  // Simpan status bahwa panel sedang terbuka di memory browser
+  localStorage.setItem("kbState", "open");
 }
+
 function closeKB() {
   g("kbPanel").classList.remove("open");
   g("kbOverlay").classList.remove("open");
+  // Hapus status saat panel ditutup
+  localStorage.setItem("kbState", "closed");
 }
 
 /* ── Health ── */
@@ -87,110 +116,152 @@ async function checkHealth() {
 /* ── Docs ── */
 async function fetchDocs() {
   try {
-    docs = await (await fetch(`${API}/documents`)).json();
+    const response = await fetch(`${API}/documents`);
+    if (!response.ok) throw new Error("Failed to fetch documents");
+    
+    const data = await response.json();
+    
+    // Compatibility Check: If backend returns an array, convert to object
+    if (Array.isArray(data)) {
+      docs = {};
+      data.forEach(d => {
+        docs[d.filename] = { 
+          status: d.status || "ready", 
+          enabled: d.enabled ?? true, 
+          chunks: d.chunks || 0 
+        };
+      });
+    } else {
+      docs = data;
+    }
+
     renderDocs();
     updateStats();
+    
+    // Poll if any document is still processing
     clearTimeout(pollT);
-    if (Object.values(docs).some((d) => d.status === "processing"))
+    const isProcessing = Object.values(docs).some((d) => d.status === "processing");
+    if (isProcessing) {
       pollT = setTimeout(fetchDocs, 3000);
+    }
   } catch (e) {
-    console.error(e);
+    console.error("Knowledge Base Error:", e);
+    g("sTxt").innerText = "KB Sync Error";
   }
 }
 
+/* ── Update Stats ── */
 function updateStats() {
-  const total = Object.keys(docs).length;
-  const active = Object.values(docs).filter(
-    (d) => d.enabled && d.status === "ready",
+  // Memastikan docs adalah object sebelum dihitung
+  const docsArray = Object.values(docs || {});
+  
+  const total = docsArray.length;
+  const active = docsArray.filter(
+    (d) => d.enabled && (d.status === "ready" || d.status === "Siap")
   ).length;
-  const chunks = Object.values(docs).reduce((s, d) => s + (d.chunks || 0), 0);
+  const chunks = docsArray.reduce((s, d) => s + (d.chunks || 0), 0);
+  
   g("kbBadge").textContent = total;
   g("stTotal").textContent = total;
   g("stActive").textContent = active;
   g("stChunks").textContent = chunks;
 }
 
-function filterDocs() {
-  df = g("kbSearch").value.toLowerCase();
-  renderDocs();
-}
-
+/* ── Render Docs ── */
 function renderDocs() {
   const list = g("docList");
-  list.innerHTML = "";
   const empty = g("docEmpty");
+  
+  // Hapus semua elemen card, tapi JANGAN hapus elemen 'docEmpty'
+  Array.from(list.children).forEach(child => {
+    if (child.id !== "docEmpty") {
+      child.remove();
+    }
+  });
 
   const entries = Object.entries(docs).filter(([n]) =>
-    n.toLowerCase().includes(df),
+    n.toLowerCase().includes(df)
   );
-  if (!entries.length) {
-    list.appendChild(empty);
+
+  // Jika tidak ada dokumen, tampilkan pesan kosong
+  if (entries.length === 0) {
     empty.style.display = "flex";
     return;
   }
+  
+  // Sembunyikan pesan kosong jika ada dokumen
   empty.style.display = "none";
 
   entries.forEach(([name, info]) => {
     const card = document.createElement("div");
-    card.className =
-      `doc-card ${info.status} ${!info.enabled ? "dis" : ""}`.trim();
+    const status = info.status || "ready";
+    card.className = `doc-card ${status} ${!info.enabled ? "dis" : ""}`.trim();
 
-    const icoClass =
-      info.status === "processing"
-        ? "warn"
-        : info.status === "error"
-          ? ""
-          : "ok";
-    const icoHtml =
-      info.status === "processing"
-        ? `<i class="fa-solid fa-spinner fa-spin"></i>`
-        : info.status === "error"
-          ? `<i class="fa-solid fa-triangle-exclamation"></i>`
-          : `<i class="fa-regular fa-file-pdf"></i>`;
-    const badge =
-      info.status === "processing"
-        ? "Memproses"
-        : info.status === "error"
-          ? "Error"
-          : "Siap";
+    let icoHtml = `<i class="fa-regular fa-file-pdf"></i>`;
+    let icoClass = "ok";
+    let badgeTxt = "Siap";
+
+    if (status === "processing") {
+      icoHtml = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+      icoClass = "warn";
+      badgeTxt = "Memproses";
+    } else if (status === "error") {
+      icoHtml = `<i class="fa-solid fa-triangle-exclamation"></i>`;
+      icoClass = ""; 
+      badgeTxt = "Error";
+    }
+
     const sn = esc(name);
-
     card.innerHTML = `
-<div class="doc-card-top">
-  <div class="doc-ico ${icoClass}">${icoHtml}</div>
-  <div class="doc-inf">
-    <div class="doc-name" title="${sn}">${sn}</div>
-    <div class="doc-meta">${info.chunks ? info.chunks + " chunks" : ""}</div>
-  </div>
-  <span class="doc-badge ${info.status}">${badge}</span>
-</div>
-${info.status === "processing" ? `<div class="doc-prog"><div class="doc-prog-bar"></div></div>` : ""}
-<div class="doc-acts">
-  <label class="tog-lbl">
-    <input type="checkbox" ${info.enabled ? "checked" : ""} onchange="toggleDoc('${sn}',this.checked)">
-    <span class="tog-track"></span>
-    <span class="tog-txt">${info.enabled ? "Aktif" : "Nonaktif"}</span>
-  </label>
-  <button class="doc-del" onclick="delDoc('${sn}')"><i class="fa-solid fa-trash"></i></button>
-</div>
-`;
+      <div class="doc-card-top">
+        <div class="doc-ico ${icoClass}">${icoHtml}</div>
+        <div class="doc-inf">
+          <div class="doc-name" title="${sn}">${sn}</div>
+          <div class="doc-meta">${info.chunks ? info.chunks + " chunks" : "0 chunks"}</div>
+        </div>
+        <span class="doc-badge ${status}">${badgeTxt}</span>
+      </div>
+      ${status === "processing" ? `<div class="doc-prog"><div class="doc-prog-bar"></div></div>` : ""}
+      <div class="doc-acts">
+        <label class="tog-lbl">
+          <input type="checkbox" ${info.enabled ? "checked" : ""} onchange="toggleDoc('${sn}', this.checked)">
+          <span class="tog-track"></span>
+          <span class="tog-txt">${info.enabled ? "Aktif" : "Nonaktif"}</span>
+        </label>
+        <button class="doc-del" onclick="delDoc('${sn}')"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    `;
     list.appendChild(card);
   });
 }
 
+/* ── Toggle Doc ── */
 async function toggleDoc(name, en) {
   try {
-    await fetch(`${API}/documents/toggle`, {
+    const response = await fetch(`${API}/documents/toggle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filename: name, enabled: en }),
     });
+
+    if (!response.ok) {
+      // Menangkap detail error dari backend jika ada
+      let errMsg = response.statusText;
+      try {
+        const errData = await response.json();
+        if (errData.detail) errMsg = JSON.stringify(errData.detail);
+      } catch(e) {}
+      throw new Error(`Error ${response.status}: ${errMsg}`);
+    }
+
     if (docs[name]) docs[name].enabled = en;
     updateStats();
     renderDocs();
-  } catch {
-    alert("Toggle gagal.");
-    fetchDocs();
+  } catch (err) {
+    console.error("Detail Toggle Error:", err);
+    // Alert sekarang akan memunculkan kode error spesifik
+    alert(`Toggle gagal. ${err.message}`);
+    fetchDocs(); // Refresh untuk mengembalikan tombol seperti semula
   }
 }
 

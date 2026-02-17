@@ -980,7 +980,6 @@ body {
   border-radius: var(--r);
   overflow: hidden;
   transition: border-color var(--tr);
-  animation: fi 0.18s ease;
 }
 .doc-card:hover {
   border-color: var(--c-bdr2);
