@@ -3,104 +3,187 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NUSAGEMMA</title>
-
-    <!-- Google Fonts & Icons -->
+    <title>NusaGemma</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-
+    <!-- Link to external CSS -->
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="brand"><i class="fa-solid fa-staff-snake"></i> NUSAGEMMA</div>
-
-      <button class="btn-new-chat" onclick="startNewChat()">
-        <i class="fa-solid fa-plus"></i> New Chat
-      </button>
-
-      <!-- SECTION 1: HISTORY -->
-      <div class="sidebar-section">
-        <div class="section-title">Recent Chats</div>
-        <ul id="chatHistoryList" class="scrollable-list">
-          <!-- Chat items go here -->
-        </ul>
-      </div>
-
-      <!-- SECTION 2: KNOWLEDGE -->
-      <div class="sidebar-section flex-grow">
-        <div class="section-header">
-          <div class="section-title">Knowledge Base</div>
-          <button class="icon-btn" id="uploadBtn" title="Upload PDF">
-            <i class="fa-solid fa-upload"></i>
-          </button>
+    <!-- ════════ SIDEBAR ════════ -->
+    <aside id="sidebar">
+      <div class="sb-top">
+        <div class="brand">
+          <div class="brand-ico"><i class="fa-solid fa-staff-snake"></i></div>
+          <div>
+            <span class="brand-name">NusaGemma</span>
+            <span class="brand-sub">Edge Medical AI</span>
+          </div>
         </div>
-        <input type="file" id="pdfInput" accept=".pdf" hidden />
-        <ul id="docList" class="file-list scrollable-list">
-          <!-- Files go here -->
-          <li class="file-item loading">Loading...</li>
-        </ul>
+        <button class="btn-newchat" onclick="startNewChat()">
+          <i class="fa-solid fa-plus"></i> New Chat
+        </button>
       </div>
 
-      <!-- SECTION 3: FOOTER -->
-      <div class="sidebar-footer">
-        <button class="nav-item" onclick="openSettings()">
-          <i class="fa-solid fa-gear"></i> Settings
-        </button>
-        <div class="system-status">
-          <div id="statusDot" class="status-dot"></div>
-          <span id="statusText">Connecting...</span>
+      <div class="sb-section">
+        <div class="sb-lbl">Recent</div>
+        <ul class="hist-list" id="histList"></ul>
+      </div>
+
+      <div class="sb-foot">
+        <div>
+          <div class="model-chip">
+            <i class="fa-solid fa-microchip"></i> MedGemma 4B · Q4_K_M
+          </div>
+          <div class="model-meta" style="margin-top: 5px">
+            CPU Optimized · Offline
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="s-dot" id="sDot"></div>
+          <span id="sTxt">Connecting…</span>
         </div>
       </div>
     </aside>
 
-    <!-- MAIN INTERFACE -->
-    <main class="main">
-      <div class="top-bar">
-        <div class="model-badge">
-          <i class="fa-solid fa-microchip"></i> MedGemma-4b-Q4 (Agentic)
+    <!-- ════════ MAIN ════════ -->
+    <div class="main">
+      <header class="topbar">
+        <button class="btn-ico" onclick="toggleSB()">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="topbar-mid">
+          <label class="rag-lbl">
+            <input type="checkbox" id="useRag" checked />
+            <span class="rag-track"></span>
+            <span>RAG Context</span>
+          </label>
         </div>
-        <label class="toggle-rag">
-          <input type="checkbox" id="useRag" checked />
-          <span>Enable RAG Context</span>
-        </label>
-      </div>
+        <div class="topbar-right">
+          <button class="btn-kb" onclick="openKB()">
+            <i class="fa-solid fa-database"></i>
+            <span>Knowledge Base</span>
+            <span class="kb-badge" id="kbBadge">0</span>
+          </button>
+        </div>
+      </header>
 
-      <div id="chatWindow" class="chat-window">
-        <!-- Welcome Message (Default) -->
-        <div class="message ai" id="welcomeMsg">
-          <div class="ai-icon"><i class="fa-solid fa-robot"></i></div>
-          <div class="ai-content">
-            <div class="ai-text">
-              <strong>Selamat datang di NUSAGEMMA.</strong><br />
-              Sistem siap membantu analisis Juknis & Rekam Medis.
-            </div>
+      <div class="chat-win" id="chatWin">
+        <!-- Welcome -->
+        <div class="welcome" id="welcome">
+          <div class="welcome-glow"></div>
+          <div class="welcome-ico"><i class="fa-solid fa-staff-snake"></i></div>
+          <h1>NusaGemma</h1>
+          <p>
+            Asisten medis berbasis AI untuk Puskesmas.<br />Unggah panduan
+            Kemenkes dan mulai bertanya.
+          </p>
+          <div class="chips">
+            <button class="chip" onclick="useChip(this)">
+              Langkah pertama untuk demam berdarah?
+            </button>
+            <button class="chip" onclick="useChip(this)">
+              Definisi stunting menurut WHO?
+            </button>
+            <button class="chip" onclick="useChip(this)">
+              Protokol malaria di daerah endemis?
+            </button>
           </div>
         </div>
+        <!-- Feed -->
+        <div class="feed" id="feed"></div>
       </div>
 
       <div class="input-area">
-        <div class="input-wrapper">
-          <input
-            type="text"
-            id="userInput"
-            placeholder="Tanyakan diagnosa, obat, atau prosedur..."
-            autocomplete="off"
-          />
-          <button id="sendBtn">
-            <i class="fa-solid fa-paper-plane"></i>
+        <div class="input-wrap">
+          <textarea
+            id="chatInp"
+            class="chat-inp"
+            rows="1"
+            placeholder="Tanyakan tentang diagnosa, obat, atau prosedur klinis…"
+          ></textarea>
+          <button class="btn-send" id="sendBtn" onclick="send()">
+            <i class="fa-solid fa-arrow-up"></i>
           </button>
         </div>
+        <p class="disclaimer">
+          NusaGemma dapat membuat kesalahan. Selalu verifikasi dengan tenaga
+          medis profesional.
+        </p>
       </div>
-    </main>
+    </div>
 
+    <!-- ════════ KB OVERLAY + PANEL ════════ -->
+    <div id="kbOverlay" onclick="closeKB()"></div>
+
+    <aside id="kbPanel">
+      <div class="kb-head">
+        <div class="kb-head-title">
+          <i class="fa-solid fa-database"></i>
+          Knowledge Base
+        </div>
+        <button class="kb-close-btn" onclick="closeKB()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="kb-body">
+        <div
+          class="upload-zone"
+          id="upZone"
+          onclick="document.getElementById('pdfInp').click()"
+        >
+          <input type="file" id="pdfInp" accept=".pdf" hidden />
+          <div class="upload-ico"><i class="fa-regular fa-file-pdf"></i></div>
+          <div class="upload-lbl">Upload Panduan / Protokol</div>
+          <div class="upload-sub">Klik atau seret file PDF ke sini</div>
+        </div>
+
+        <div class="kb-stats">
+          <div class="kb-stat">
+            <span class="kb-stat-val" id="stTotal">0</span>
+            <span class="kb-stat-lbl">Dokumen</span>
+          </div>
+          <div class="kb-divider"></div>
+          <div class="kb-stat">
+            <span class="kb-stat-val" id="stActive">0</span>
+            <span class="kb-stat-lbl">Aktif</span>
+          </div>
+          <div class="kb-divider"></div>
+          <div class="kb-stat">
+            <span class="kb-stat-val" id="stChunks">0</span>
+            <span class="kb-stat-lbl">Chunks</span>
+          </div>
+        </div>
+
+        <div class="kb-search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input
+            type="text"
+            id="kbSearch"
+            class="kb-search-inp"
+            placeholder="Cari dokumen…"
+            oninput="filterDocs()"
+          />
+        </div>
+
+        <div class="doc-list" id="docList">
+          <div class="doc-empty" id="docEmpty">
+            <i class="fa-regular fa-folder-open"></i>
+            <p>Belum ada dokumen.<br />Upload PDF untuk memulai.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Link to external JS -->
     <script src="/static/app.js"></script>
   </body>
 </html>

@@ -18,9 +18,7 @@ models/hf_cache/
 
 # --- Local Data (Privacy) ---
 # We don't want to upload the Vector DB or test PDFs
-data/vector_db/
-data/guidelines/*.pdf
-data/registry.json
+data/
 
 # --- OS Junk ---
 .DS_Store
