@@ -1,80 +1,106 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NUSAGEMMA</title>
-    
-    <!-- Google Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Local CSS -->
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
 
+    <!-- Google Fonts & Icons -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
     <!-- SIDEBAR -->
     <aside class="sidebar">
-        <div class="brand">
-            <i class="fa-solid fa-staff-snake"></i> NUSAGEMMA
-        </div>
+      <div class="brand"><i class="fa-solid fa-staff-snake"></i> NUSAGEMMA</div>
 
-        <button class="btn-upload" id="uploadBtn">
-            <i class="fa-solid fa-plus"></i> Upload PDF
-        </button>
-        <input type="file" id="pdfInput" accept=".pdf" hidden>
+      <button class="btn-new-chat" onclick="startNewChat()">
+        <i class="fa-solid fa-plus"></i> New Chat
+      </button>
 
-        <div class="section-title">Knowledge Base</div>
-        <ul id="docList" class="file-list">
-            <!-- Files injected by JS -->
-            <li class="file-item loading">Loading...</li>
+      <!-- SECTION 1: HISTORY -->
+      <div class="sidebar-section">
+        <div class="section-title">Recent Chats</div>
+        <ul id="chatHistoryList" class="scrollable-list">
+          <!-- Chat items go here -->
         </ul>
+      </div>
 
-        <div class="system-status">
-            <div id="statusDot" class="status-dot"></div>
-            <span id="statusText">Connecting...</span>
+      <!-- SECTION 2: KNOWLEDGE -->
+      <div class="sidebar-section flex-grow">
+        <div class="section-header">
+          <div class="section-title">Knowledge Base</div>
+          <button class="icon-btn" id="uploadBtn" title="Upload PDF">
+            <i class="fa-solid fa-upload"></i>
+          </button>
         </div>
+        <input type="file" id="pdfInput" accept=".pdf" hidden />
+        <ul id="docList" class="file-list scrollable-list">
+          <!-- Files go here -->
+          <li class="file-item loading">Loading...</li>
+        </ul>
+      </div>
+
+      <!-- SECTION 3: FOOTER -->
+      <div class="sidebar-footer">
+        <button class="nav-item" onclick="openSettings()">
+          <i class="fa-solid fa-gear"></i> Settings
+        </button>
+        <div class="system-status">
+          <div id="statusDot" class="status-dot"></div>
+          <span id="statusText">Connecting...</span>
+        </div>
+      </div>
     </aside>
 
     <!-- MAIN INTERFACE -->
     <main class="main">
-        <div class="top-bar">
-            <div class="model-badge">
-                <i class="fa-solid fa-microchip"></i> Gemma-2b-it-Q4
-            </div>
-            <label class="toggle-rag">
-                <input type="checkbox" id="useRag" checked> 
-                <span>Enable RAG Context</span>
-            </label>
+      <div class="top-bar">
+        <div class="model-badge">
+          <i class="fa-solid fa-microchip"></i> MedGemma-4b-Q4 (Agentic)
         </div>
+        <label class="toggle-rag">
+          <input type="checkbox" id="useRag" checked />
+          <span>Enable RAG Context</span>
+        </label>
+      </div>
 
-        <div id="chatWindow" class="chat-window">
-            <div class="container-width">
-                <!-- Welcome Message -->
-                <div class="message ai">
-                    <div class="ai-icon"><i class="fa-solid fa-robot"></i></div>
-                    <div class="ai-content">
-                        <div class="ai-text">
-                            <strong>Selamat datang di NUSAGEMMA.</strong><br>
-                            Sistem siap membantu analisis Juknis & Rekam Medis.
-                        </div>
-                    </div>
-                </div>
+      <div id="chatWindow" class="chat-window">
+        <!-- Welcome Message (Default) -->
+        <div class="message ai" id="welcomeMsg">
+          <div class="ai-icon"><i class="fa-solid fa-robot"></i></div>
+          <div class="ai-content">
+            <div class="ai-text">
+              <strong>Selamat datang di NUSAGEMMA.</strong><br />
+              Sistem siap membantu analisis Juknis & Rekam Medis.
             </div>
+          </div>
         </div>
+      </div>
 
-        <div class="input-area">
-            <div class="input-wrapper">
-                <input type="text" id="userInput" placeholder="Tanyakan diagnosa, obat, atau prosedur..." autocomplete="off">
-                <button id="sendBtn">
-                    <i class="fa-solid fa-paper-plane"></i>
-                </button>
-            </div>
+      <div class="input-area">
+        <div class="input-wrapper">
+          <input
+            type="text"
+            id="userInput"
+            placeholder="Tanyakan diagnosa, obat, atau prosedur..."
+            autocomplete="off"
+          />
+          <button id="sendBtn">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
         </div>
+      </div>
     </main>
 
-    <!-- Local JS -->
-    <script src="app.js"></script>
-</body>
+    <script src="/static/app.js"></script>
+  </body>
 </html>

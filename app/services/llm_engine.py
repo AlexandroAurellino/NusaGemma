@@ -1,4 +1,5 @@
 import os
+import sys
 from langchain_community.llms import LlamaCpp
 from app.core.config import settings
 
@@ -14,93 +15,105 @@ class LLMEngine:
 
         print(f"🚀 Loading MedGemma GGUF: {settings.MODEL_FILENAME}...")
         try:
-            # We are creating the LlamaCpp object here. The 'streamable' nature
-            # is handled by how we CALL it (.stream() vs .invoke()).
             self.llm = LlamaCpp(
                 model_path=settings.MODEL_PATH,
-                n_gpu_layers=0,
-                n_ctx=4096,
-                temperature=0.1,
-                max_tokens=1024, # Increase max tokens for thought + answer
+                n_gpu_layers=0,       
+                n_ctx=4096,           
+                temperature=0.1,      
+                max_tokens=2048,      
                 top_p=0.9,
                 repeat_penalty=1.2,
                 stop=["<end_of_turn>", "<eos>"],
-                # Set verbose to False to keep the terminal clean during streaming
                 verbose=False 
             )
-            print("✅ MedGemma Engine Online (Ready for Streaming).")
+            print("✅ MedGemma Engine Online.")
         except Exception as e:
             print(f"❌ Error loading engine: {e}")
 
-    def generate_stream(self, prompt: str):
+    def create_summary(self, text_snippet: str) -> str:
         """
-        Yields structured JSON chunks. 
-        Uses a hard delimiter '###RESPONSE###' to separate thought from answer.
+        Generates metadata card for the indexer.
+        """
+        if not self.llm: return "Summary unavailable."
+
+        prompt = (
+            f"<start_of_turn>user\n"
+            f"Summarize this medical document. List the key topics, diseases, and patient demographics mentioned.\n\n"
+            f"TEXT:\n{text_snippet[:3000]}...\n\n" 
+            f"SUMMARY:\n"
+            f"<end_of_turn>\n"
+            f"<start_of_turn>model\n"
+        )
+        try:
+            return self.llm.invoke(prompt).strip()
+        except:
+            return "Summary failed."
+
+    def generate_stream(self, question: str, context: str = None):
+        """
+        Smart Streaming: Adapts prompt based on whether context is present.
         """
         if not self.llm:
             yield {"type": "error", "content": "AI Model not loaded."}
             return
 
-        # 1. THE PROMPT: Force the separator
+        # --- DYNAMIC PROMPTING ---
+        if context:
+            # MODE A: RAG (Strict)
+            system_instruction = (
+                "You are an expert medical AI assistant. "
+                "Answer the user's question based STRICTLY on the provided context below. "
+                "If the answer is not in the context, admit it."
+            )
+            input_text = f"CONTEXT:\n{context}\n\nUSER QUESTION:\n{question}"
+        else:
+            # MODE B: GENERAL KNOWLEDGE (Fallback)
+            system_instruction = (
+                "You are NusaGemma, an expert medical AI for Indonesia. "
+                "Answer the user's question using your internal medical knowledge. "
+                "Be helpful, accurate, and concise."
+            )
+            input_text = f"USER QUESTION:\n{question}"
+
         formatted_prompt = (
             f"<start_of_turn>user\n"
-            f"You are NusaGemma. \n"
-            f"Step 1: Think silently about the context and question.\n"
-            f"Step 2: When ready, write exactly '###RESPONSE###'.\n"
+            f"{system_instruction}\n\n"
+            f"Step 1: Think step-by-step.\n"
+            f"Step 2: Write '###RESPONSE###'.\n"
             f"Step 3: Write the final answer in Bahasa Indonesia.\n\n"
-            f"{prompt}\n"
+            f"{input_text}\n"
             f"<end_of_turn>\n"
             f"<start_of_turn>model\n"
         )
         
-        # 2. THE STREAMING LOGIC
         is_thinking = True
         buffer = ""
-        
-        # We look for this specific string to flip the switch
         SEPARATOR = "###RESPONSE###"
 
-        for token in self.llm.stream(formatted_prompt):
-            buffer += token
-            
-            if is_thinking:
-                # Check if the separator has appeared in the buffer
-                if SEPARATOR in buffer:
-                    is_thinking = False
-                    
-                    # Split: Everything before separator is thought
-                    parts = buffer.split(SEPARATOR, 1)
-                    thought_content = parts[0].strip()
-                    answer_content = parts[1] # The start of the answer
-                    
-                    # 1. Flush the remaining thought
-                    if thought_content:
-                        # Clean up any trailing labels like "Step 1:"
-                        yield {"type": "thought", "content": thought_content}
-                    
-                    # 2. Flush the start of the answer
-                    if answer_content:
-                        yield {"type": "final_answer", "content": answer_content}
-                    
-                    buffer = "" # Clear buffer, we are now in direct passthrough mode
-                else:
-                    # OPTIMIZATION: Don't yield every single character for thoughts, 
-                    # it slows down the browser. Yield every 10 chars or just keep buffering.
-                    # For now, we yield regularly to show activity.
-                    yield {"type": "thought", "content": token}
-                    # Note: The frontend appends this to the thought box. 
-                    # When we eventually find the separator, the user will see the thought finish.
-            
-            else: 
-                # We found the separator! Just stream the answer directly.
-                yield {"type": "final_answer", "content": token}
+        try:
+            for token in self.llm.stream(formatted_prompt):
+                buffer += token
                 
-        # Fallback: If model finished but never wrote '###RESPONSE###'
-        # We assume the whole thing was the answer (or the thought failed)
-        if is_thinking and buffer.strip():
-             # Heuristic: If it's short, it's an answer. If long, it might be a stuck thought.
-             # Let's just output it as final answer to be safe.
-             yield {"type": "final_answer", "content": buffer}
+                if is_thinking:
+                    if SEPARATOR in buffer:
+                        is_thinking = False
+                        parts = buffer.split(SEPARATOR, 1)
+                        thought = parts[0].strip()
+                        ans = parts[1]
+                        
+                        if thought: yield {"type": "thought", "content": thought}
+                        if ans: yield {"type": "final_answer", "content": ans}
+                        buffer = "" 
+                    else:
+                        yield {"type": "thought", "content": token}
+                else: 
+                    yield {"type": "final_answer", "content": token}
+            
+            if is_thinking and buffer.strip():
+                 yield {"type": "final_answer", "content": "\n" + buffer}
 
-# Singleton Instance
+        except Exception as e:
+            print(f"Stream Error: {e}")
+            yield {"type": "final_answer", "content": f"[System Error: {str(e)}]"}
+
 llm_service = LLMEngine()
