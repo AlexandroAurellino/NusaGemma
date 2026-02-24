@@ -45,10 +45,6 @@ window.addEventListener("DOMContentLoaded", () => {
   renderHist();
   startNewChat();
 
-  // ... (sisa event listener untuk inp, drop zone, dll di bawahnya tetap sama)
-  
-  // ... (sisa kode kamu di bawahnya tetap sama)
-
   inp.addEventListener("input", () => {
     inp.style.height = "auto";
     inp.style.height = Math.min(inp.scrollHeight, 160) + "px";
@@ -118,17 +114,17 @@ async function fetchDocs() {
   try {
     const response = await fetch(`${API}/documents`);
     if (!response.ok) throw new Error("Failed to fetch documents");
-    
+
     const data = await response.json();
-    
+
     // Compatibility Check: If backend returns an array, convert to object
     if (Array.isArray(data)) {
       docs = {};
-      data.forEach(d => {
-        docs[d.filename] = { 
-          status: d.status || "ready", 
-          enabled: d.enabled ?? true, 
-          chunks: d.chunks || 0 
+      data.forEach((d) => {
+        docs[d.filename] = {
+          status: d.status || "ready",
+          enabled: d.enabled ?? true,
+          chunks: d.chunks || 0,
         };
       });
     } else {
@@ -137,10 +133,12 @@ async function fetchDocs() {
 
     renderDocs();
     updateStats();
-    
+
     // Poll if any document is still processing
     clearTimeout(pollT);
-    const isProcessing = Object.values(docs).some((d) => d.status === "processing");
+    const isProcessing = Object.values(docs).some(
+      (d) => d.status === "processing",
+    );
     if (isProcessing) {
       pollT = setTimeout(fetchDocs, 3000);
     }
@@ -154,13 +152,13 @@ async function fetchDocs() {
 function updateStats() {
   // Memastikan docs adalah object sebelum dihitung
   const docsArray = Object.values(docs || {});
-  
+
   const total = docsArray.length;
   const active = docsArray.filter(
-    (d) => d.enabled && (d.status === "ready" || d.status === "Siap")
+    (d) => d.enabled && (d.status === "ready" || d.status === "Siap"),
   ).length;
   const chunks = docsArray.reduce((s, d) => s + (d.chunks || 0), 0);
-  
+
   g("kbBadge").textContent = total;
   g("stTotal").textContent = total;
   g("stActive").textContent = active;
@@ -171,16 +169,16 @@ function updateStats() {
 function renderDocs() {
   const list = g("docList");
   const empty = g("docEmpty");
-  
+
   // Hapus semua elemen card, tapi JANGAN hapus elemen 'docEmpty'
-  Array.from(list.children).forEach(child => {
+  Array.from(list.children).forEach((child) => {
     if (child.id !== "docEmpty") {
       child.remove();
     }
   });
 
   const entries = Object.entries(docs).filter(([n]) =>
-    n.toLowerCase().includes(df)
+    n.toLowerCase().includes(df),
   );
 
   // Jika tidak ada dokumen, tampilkan pesan kosong
@@ -188,7 +186,7 @@ function renderDocs() {
     empty.style.display = "flex";
     return;
   }
-  
+
   // Sembunyikan pesan kosong jika ada dokumen
   empty.style.display = "none";
 
@@ -207,7 +205,7 @@ function renderDocs() {
       badgeTxt = "Memproses";
     } else if (status === "error") {
       icoHtml = `<i class="fa-solid fa-triangle-exclamation"></i>`;
-      icoClass = ""; 
+      icoClass = "";
       badgeTxt = "Error";
     }
 
@@ -250,7 +248,7 @@ async function toggleDoc(name, en) {
       try {
         const errData = await response.json();
         if (errData.detail) errMsg = JSON.stringify(errData.detail);
-      } catch(e) {}
+      } catch (e) {}
       throw new Error(`Error ${response.status}: ${errMsg}`);
     }
 
@@ -259,7 +257,6 @@ async function toggleDoc(name, en) {
     renderDocs();
   } catch (err) {
     console.error("Detail Toggle Error:", err);
-    // Alert sekarang akan memunculkan kode error spesifik
     alert(`Toggle gagal. ${err.message}`);
     fetchDocs(); // Refresh untuk mengembalikan tombol seperti semula
   }

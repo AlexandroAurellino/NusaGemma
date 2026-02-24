@@ -68,7 +68,6 @@ def run_background_processing(filename: str):
             with open(settings.REGISTRY_PATH, "w") as f:
                 json.dump(current_registry, f, indent=4)
 
-# THE RAG ENGINE CLASS IS NOW MUCH SIMPLER
 class RAGEngine:
     def __init__(self):
         os.makedirs(settings.GUIDELINES_DIR, exist_ok=True)
@@ -104,7 +103,6 @@ class RAGEngine:
         except: pass
 
     def upload_pdf_init(self, file_obj, filename, force_update=False):
-        # This function is now very fast, it only saves the file
         file_path = os.path.join(settings.GUIDELINES_DIR, filename)
         
         if filename in self.registry and not force_update:
