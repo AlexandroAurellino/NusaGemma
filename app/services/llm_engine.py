@@ -20,7 +20,7 @@ class LLMEngine:
                 n_gpu_layers=0,       
                 n_ctx=4096,           
                 temperature=0.1,      
-                max_tokens=2048,      
+                max_tokens=1024, # Reduced because it no longer needs room for "thoughts"     
                 top_p=0.9,
                 repeat_penalty=1.2,
                 stop=["<end_of_turn>", "<eos>"],
@@ -31,11 +31,7 @@ class LLMEngine:
             print(f"❌ Error loading engine: {e}")
 
     def create_summary(self, text_snippet: str) -> str:
-        """
-        Generates metadata card for the indexer.
-        """
         if not self.llm: return "Summary unavailable."
-
         prompt = (
             f"<start_of_turn>user\n"
             f"Summarize this medical document. List the key topics, diseases, and patient demographics mentioned.\n\n"
@@ -51,69 +47,44 @@ class LLMEngine:
 
     def generate_stream(self, question: str, context: str = None):
         """
-        Smart Streaming: Adapts prompt based on whether context is present.
+        Clean Streaming: The LLM ONLY outputs the final answer. No tags.
         """
         if not self.llm:
             yield {"type": "error", "content": "AI Model not loaded."}
             return
 
-        # --- DYNAMIC PROMPTING ---
+        # STRICT PROMPTING: Do not think, just answer.
         if context:
-            # MODE A: RAG (Strict)
             system_instruction = (
-                "You are an expert medical AI assistant. "
-                "Answer the user's question based STRICTLY on the provided context below. "
-                "If the answer is not in the context, admit it."
+                "Anda adalah NusaGemma, asisten AI medis untuk Puskesmas di Indonesia.\n"
+                "TUGAS: Jawab pertanyaan pengguna berdasarkan KONTEKS yang diberikan.\n"
+                "ATURAN: Jawab secara langsung, ringkas, dan HANYA gunakan Bahasa Indonesia. JANGAN menulis proses pemikiran Anda."
             )
-            input_text = f"CONTEXT:\n{context}\n\nUSER QUESTION:\n{question}"
+            input_text = f"KONTEKS:\n{context}\n\nPERTANYAAN PENGGUNA:\n{question}"
         else:
-            # MODE B: GENERAL KNOWLEDGE (Fallback)
             system_instruction = (
-                "You are NusaGemma, an expert medical AI for Indonesia. "
-                "Answer the user's question using your internal medical knowledge. "
-                "Be helpful, accurate, and concise."
+                "Anda adalah NusaGemma, asisten AI medis untuk Puskesmas di Indonesia.\n"
+                "TUGAS: Jawab pertanyaan pengguna menggunakan pengetahuan medis Anda.\n"
+                "ATURAN: Jawab secara langsung, ringkas, dan HANYA gunakan Bahasa Indonesia. JANGAN menulis proses pemikiran Anda."
             )
-            input_text = f"USER QUESTION:\n{question}"
+            input_text = f"PERTANYAAN PENGGUNA:\n{question}"
 
         formatted_prompt = (
             f"<start_of_turn>user\n"
             f"{system_instruction}\n\n"
-            f"Step 1: Think step-by-step.\n"
-            f"Step 2: Write '###RESPONSE###'.\n"
-            f"Step 3: Write the final answer in Bahasa Indonesia.\n\n"
             f"{input_text}\n"
             f"<end_of_turn>\n"
             f"<start_of_turn>model\n"
         )
-        
-        is_thinking = True
-        buffer = ""
-        SEPARATOR = "###RESPONSE###"
 
         try:
             for token in self.llm.stream(formatted_prompt):
-                buffer += token
-                
-                if is_thinking:
-                    if SEPARATOR in buffer:
-                        is_thinking = False
-                        parts = buffer.split(SEPARATOR, 1)
-                        thought = parts[0].strip()
-                        ans = parts[1]
-                        
-                        if thought: yield {"type": "thought", "content": thought}
-                        if ans: yield {"type": "final_answer", "content": ans}
-                        buffer = "" 
-                    else:
-                        yield {"type": "thought", "content": token}
-                else: 
-                    yield {"type": "final_answer", "content": token}
-            
-            if is_thinking and buffer.strip():
-                 yield {"type": "final_answer", "content": "\n" + buffer}
+                # Because the prompt forbids thinking, EVERYTHING the model outputs 
+                # is guaranteed to be the final answer. We stream it directly.
+                yield {"type": "final_answer", "content": token}
 
         except Exception as e:
             print(f"Stream Error: {e}")
-            yield {"type": "final_answer", "content": f"[System Error: {str(e)}]"}
+            yield {"type": "final_answer", "content": f"\n[System Error: {str(e)}]"}
 
 llm_service = LLMEngine()

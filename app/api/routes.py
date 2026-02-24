@@ -1,11 +1,13 @@
 import json
+import multiprocessing
 import time
+import asyncio
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 
 from app.models.schemas import ChatRequest, ToggleRequest
 from app.services.llm_engine import llm_service
-from app.services.rag_engine import rag_service
+from app.services.rag_engine import rag_service, run_background_processing
 
 router = APIRouter()
 
@@ -16,7 +18,7 @@ def health_check():
 
 @router.get("/documents")
 def list_docs():
-    return rag_service.registry
+    return rag_service._load_registry()
 
 @router.post("/documents/upload")
 def upload_doc(
@@ -30,9 +32,10 @@ def upload_doc(
     success, msg = rag_service.upload_pdf_init(file.file, file.filename, force_update=force)
     
     if success:
-        # TRIGGER BACKGROUND TASK
-        background_tasks.add_task(rag_service.process_document_background, file.filename)
-        return {"success": True, "message": "File accepted. Processing in background."}
+        # Spawn process using the standalone function imported from rag_engine
+        process = multiprocessing.Process(target=run_background_processing, args=(file.filename,))
+        process.start()
+        return {"success": True, "message": "File accepted. Processing in a separate process."}
     else:
         raise HTTPException(409, detail=msg)
 
@@ -48,41 +51,57 @@ def delete_doc(filename: str):
         raise HTTPException(404, detail="File not found")
     return {"success": success, "message": f"{filename} deleted"}
 
+# --- AGENTIC CHAT STREAM ---
 @router.post("/chat-stream")
 async def chat_stream(req: ChatRequest):
     if not llm_service.llm:
         raise HTTPException(503, "Model is still loading...")
 
     async def stream_generator():
-        context_text = None # Default to None (General Mode)
+        context_text = None
         sources = []
+        
+        # Helper to format SSE messages safely
+        def format_sse(data_dict):
+            return f"data: {json.dumps(data_dict)}\n\n"
 
-        # 1. HIERARCHICAL RAG ATTEMPT
         if req.use_rag:
-            yield f"data: {json.dumps({'type': 'thought', 'content': '🕵️ Agent: Scanning document summaries...'})}\n\n"
+            # 1. Scanning
+            yield format_sse({'type': 'thought', 'content': '🔍 Agent: Menganalisis pertanyaan pengguna...\n'})
+            await asyncio.sleep(0.3)
+            
+            yield format_sse({'type': 'thought', 'content': '📚 Agent: Memindai ringkasan dokumen lokal...\n'})
             
             try:
+                # Run the actual RAG search
                 docs, source_names = rag_service.hierarchical_search(req.message)
                 
                 if source_names and docs:
-                    yield f"data: {json.dumps({'type': 'thought', 'content': f' Found match in {source_names[0]}. Reading...'})}\n\n"
+                    msg = f"✅ Agent: Dokumen relevan ditemukan ({source_names[0]}).\n"
+                    yield format_sse({'type': 'thought', 'content': msg})
+                    await asyncio.sleep(0.3)
+                    
+                    yield format_sse({'type': 'thought', 'content': '✂️ Agent: Mengekstrak konteks klinis spesifik...\n'})
+                    
                     context_text = "\n\n".join([d.page_content for d in docs])
                     sources = source_names
                 else:
-                    # RAG FAILED TO FIND DOCS
-                    yield f"data: {json.dumps({'type': 'thought', 'content': ' No relevant documents found. Switching to General Knowledge Mode.'})}\n\n"
-                    context_text = None # Explicitly set to None
+                    yield format_sse({'type': 'thought', 'content': '⚠️ Agent: Tidak ada dokumen relevan. Beralih ke Pengetahuan Umum.\n'})
+                    context_text = None
                     
             except Exception as e:
-                print(f"RAG Error: {e}")
-                yield f"data: {json.dumps({'type': 'thought', 'content': f' RAG Error: {e}. Using General Knowledge.'})}\n\n"
+                err_msg = f"❌ RAG Error: {e}. Beralih ke Pengetahuan Umum.\n"
+                yield format_sse({'type': 'thought', 'content': err_msg})
 
-        # 2. GENERATION (With Fallback)
-        # We pass context_text. If it's None, llm_engine uses General Mode.
+        # Signal that the backend logic is done and LLM is taking over
+        yield format_sse({'type': 'thought', 'content': '🧠 MedGemma: Memformulasikan jawaban akhir...\n'})
+        
+        # Now, stream the LLM's output directly into the final_answer box
         for chunk in llm_service.generate_stream(req.message, context=context_text):
+            # chunk is already a dict, just dump it
             yield f"data: {json.dumps(chunk)}\n\n"
             
-        # 3. Sources (Only if RAG was used)
+        # Send Sources
         if sources:
             source_chunk = {"type": "sources", "content": sources}
             yield f"data: {json.dumps(source_chunk)}\n\n"
