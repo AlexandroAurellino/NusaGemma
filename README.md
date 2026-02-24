@@ -121,6 +121,7 @@ To achieve "Edge AI" performance, we did not use the default model weights. We b
 - **Reduction:** ~73% smaller
 
 **[View the Engineering Notebook (Google Colab)](https://colab.research.google.com/drive/1oJdJM-4A9B3fvb4tiXuW-uUh_LC6OSky?usp=sharing)**
+
 _This notebook demonstrates the exact build process used to create the GGUF file._
 
 ---
