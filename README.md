@@ -1,4 +1,4 @@
-# 🇮🇩 NusaGemma: Offline Agentic AI for Rural Health Clinics
+# NusaGemma: Offline Agentic AI for Rural Health Clinics
 
 > **🏆 Submission for Google MedGemma Impact Challenge**
 >
@@ -42,7 +42,7 @@ We moved beyond standard scripts to build a robust **Microservice Architecture**
 
 ## 🚀 Installation & Setup
 
-_Prerequisites: Python 3.10+ installed._
+**Prerequisites:** You must use **Python 3.11**. Newer versions (3.12+) may cause compatibility issues with the inference engine.
 
 ### 1. Clone the Repository
 
@@ -54,10 +54,12 @@ cd NusaGemma
 ### 2. Install Dependencies
 
 ```bash
-python -m venv venv
 # Windows
+py -3.11 -m venv venv
 .\venv\Scripts\activate
+
 # Linux/Mac
+python3.11 -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
@@ -67,16 +69,17 @@ pip install -r requirements.txt
 
 Due to GitHub size limits, our custom quantized model is hosted externally.
 
-1.  **Download:** `medgemma-4b-it-Q4_K_M.gguf` (2.32 GB)
-2.  **Link:** **[CLICK HERE TO DOWNLOAD FROM GOOGLE DRIVE]([PASTE_YOUR_GDRIVE_LINK_HERE])**
-3.  **Action:** Move the file into the `models/` folder.
+1.  **File Name:** `medgemma-4b-it-Q4_K_M.gguf`
+2.  **Size:** 2.32 GB
+3.  **Download Link:** **[CLICK HERE TO DOWNLOAD FROM GOOGLE DRIVE](https://drive.google.com/file/d/1eRhud2UxKQBCy0Jzp2caE9zeIx4JIEVI/view?usp=drivesdk)**
+4.  **Action:** Move the downloaded file into the `models/` folder.
 
-**Final Structure:**
+**Final Folder Structure:**
 
 ```text
 NusaGemma/
 ├── models/
-│   └── medgemma-4b-it-Q4_K_M.gguf  <-- File must be here
+│   └── medgemma-4b-it-Q4_K_M.gguf  <-- File MUST be here
 ├── app/
 ├── data/
 ├── static/
@@ -117,7 +120,8 @@ To achieve "Edge AI" performance, we did not use the default model weights. We b
 - **Target Size:** 2.32 GB (`Q4_K_M`)
 - **Reduction:** ~73% smaller
 
-_The Jupyter Notebook used for this conversion process is available in this repo: [`quantization/MedGemma_Quantization.ipynb`](quantization/MedGemma_Quantization.ipynb)._
+**[View the Engineering Notebook (Google Colab)](https://colab.research.google.com/drive/1oJdJM-4A9B3fvb4tiXuW-uUh_LC6OSky?usp=sharing)**
+_This notebook demonstrates the exact build process used to create the GGUF file._
 
 ---
 
@@ -125,7 +129,7 @@ _The Jupyter Notebook used for this conversion process is available in this repo
 
 For rural deployment, we package this application as a **Portable Zip**.
 
-1.  **No Installation:** Includes embedded Python.
+1.  **No Installation:** Includes embedded Python 3.11.
 2.  **One-Click Run:** Doctors simply double-click `start_nusagemma.bat`.
 3.  **Hardware Tested:** Successfully deployed on an **AMD Ryzen 5 Laptop with 16GB RAM (No GPU)**.
 
